@@ -8,22 +8,22 @@ Just like the original game, the snake, controlled by the player has to hit targ
 
 The **Endless Game** takes place on an empty map (no obstacles) and has no point limit. The **Levels** mode allows the player to complete challenges. Levels define obstacles and the number of points the player has to reach to move on to the next level.
 
-<div style="display: flex; justify-content: center;">
-  <figure>
-    <img src="docs/images/menu.png" alt="Menu" width="300">
-    <figcaption>Menu</figcaption>
-  </figure>
 
-  <figure>
-    <img src="docs/images/endless_game.png" alt="Endless Game" width="300">
-    <figcaption>Endless Game</figcaption>
-  </figure>
-
-  <figure>
-    <img src="docs/images/example_level.png" alt="Example Level" width="300">
-    <figcaption>Example Level</figcaption>
-  </figure>
+<div style="display: flex; justify-content: center; gap: 20px;">
+  <div style="text-align: center;">
+    <img src="docs/images/menu.png" alt="Menu" width="250">
+    <p><em>Menu</em></p>
+  </div>
+  <div style="text-align: center;">
+    <img src="docs/images/endless_game.png" alt="Endless Game" width="250">
+    <p><em>Endless Game</em></p>
+  </div>
+  <div style="text-align: center;">
+    <img src="docs/images/example_level.png" alt="Example Level" width="250">
+    <p><em>Example Level</em></p>
+  </div>
 </div>
+
 
 
 ## Adding custom levels
@@ -63,17 +63,14 @@ The rendered example level looks as following:
 - The green object represents a randomly placed target
 - The arrow shows the initial direction of the snake
 
+<p>
+    <img src="docs/images/example_level_2.png" alt="Level in-game" width="250">
+</p>
+<p>
+    <em>Rendered examplelevel</em>
+</p>
 
-<div style="display: flex; justify-content: center;">
-  <figure>
-    <img src="docs/images/example_level_2.png" alt="Level in-game" width="300">
-    <figcaption>Rendered example level</figcaption>
-  </figure>
-</div>
-
-
-
-The sequence of the levels depends on the alphabetical order of the file names. For example, level_1 is loaded before level_2. To add a level between those two, you could name it e.g. level_1a.
+<br>The sequence of the levels depends on the alphabetical order of the file names. For example, level_1 is loaded before level_2. To add a level between those two, you could name it e.g. level_1a.
 
 
 ## Contributing
