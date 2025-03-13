@@ -1,6 +1,10 @@
 [package]
 name = "rusty-head-snake"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["Tzuzuzj Stefano <tzuzuzj@gmx.at>"]
+description = "A simple Snake implementation completely written in Rust"
+license = "GNU GENERAL PUBLIC LICENSE"
+repository = "https://github.com/tzuzuzj/rusty-head-snake"
 edition = "2021"
 
 
