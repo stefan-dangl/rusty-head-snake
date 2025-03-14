@@ -1,24 +1,20 @@
 use crate::constants::{BACKGROUND_COLOR, OBSTACLE_COLOR, OBSTACLE_WIDTH};
-use crate::graphic_utils::{rectangle_corners, transform};
+use crate::graphic_utils::{draw_scaled_square, render_points};
 use crate::level::Level;
 use crate::snake::{Direction, Snake};
 use crate::target::Target;
-use crate::text::TextHandler;
+use crate::Context;
 use euclid::Point2D;
-use glutin_window::GlutinWindow as Window;
-use graphics::{clear, rectangle};
-use opengl_graphics::GlGraphics;
-use piston::event_loop::{EventSettings, Events};
-use piston::input::{RenderArgs, RenderEvent, UpdateEvent};
-use piston::{ButtonArgs, ButtonEvent, EventLoop};
+use macroquad::input::{get_last_key_pressed, KeyCode};
+use macroquad::time::get_frame_time;
+use macroquad::window::{clear_background, next_frame, screen_height, screen_width};
 
-pub struct Game<'a> {
+pub struct Game {
     pub snake: Snake,
     pub target: Target,
     pub obstacles: Vec<Point2D<i32, i32>>,
     pub width: i32,
     pub height: i32,
-    pub text: TextHandler<'a>,
 }
 
 #[derive(PartialEq)]
@@ -36,42 +32,29 @@ enum UpdateResult {
 }
 
 #[derive(PartialEq, Debug)]
-enum ButtonResult {
+enum KeyPressResult {
     Exit,
     None,
 }
 
-impl Game<'_> {
-    fn render_game(
-        &mut self,
-        args: &RenderArgs,
-        gl: &mut GlGraphics,
-        point_counter: i32,
-        point_target: Option<i32>,
-    ) {
+impl Game {
+    fn render_game(&mut self, cx: &Context, point_counter: i32, point_target: Option<i32>) {
+        clear_background(BACKGROUND_COLOR);
+
         let scaling = (
-            args.window_size[0] / f64::from(self.width),
-            args.window_size[1] / f64::from(self.height),
+            screen_width() / self.width as f32,
+            screen_height() / self.height as f32,
         );
 
-        gl.draw(args.viewport(), |_, gl| {
-            clear(BACKGROUND_COLOR, gl);
-        });
-        self.render_obstacles(args, gl, scaling);
-        self.target.render(args, gl, scaling);
-        self.snake.render(args, gl, scaling);
-        self.text
-            .render_points(args, gl, point_counter, point_target);
+        self.render_obstacles(scaling);
+        self.target.render(scaling);
+        self.snake.render(scaling);
+        render_points(point_counter, point_target, Some(&cx.font));
     }
 
-    fn render_obstacles(&mut self, args: &RenderArgs, gl: &mut GlGraphics, scaling: (f64, f64)) {
-        let shape = rectangle_corners(OBSTACLE_WIDTH, scaling);
-
+    fn render_obstacles(&mut self, scaling: (f32, f32)) {
         for position in &self.obstacles {
-            gl.draw(args.viewport(), |c, gl| {
-                let transform = transform(c, *position, scaling);
-                rectangle(OBSTACLE_COLOR, shape, transform, gl);
-            });
+            draw_scaled_square(OBSTACLE_COLOR, *position, OBSTACLE_WIDTH, scaling);
         }
     }
 
@@ -103,32 +86,31 @@ impl Game<'_> {
         false
     }
 
-    fn button_press(&mut self, args: &ButtonArgs) -> ButtonResult {
-        if args.state == piston::ButtonState::Press {
-            if let piston::Button::Keyboard(key) = args.button {
-                match key {
-                    piston::Key::Escape => return ButtonResult::Exit,
-                    piston::Key::Up | piston::Key::W => {
-                        self.snake.set_direction(Direction::Up);
-                    }
-                    piston::Key::Down | piston::Key::S => {
-                        self.snake.set_direction(Direction::Down);
-                    }
-                    piston::Key::Left | piston::Key::A => {
-                        self.snake.set_direction(Direction::Left);
-                    }
-                    piston::Key::Right | piston::Key::D => {
-                        self.snake.set_direction(Direction::Right);
-                    }
-                    _ => {}
+    fn handle_key_press(&mut self, key: Option<KeyCode>) -> KeyPressResult {
+        if let Some(key) = key {
+            match key {
+                KeyCode::Escape => return KeyPressResult::Exit,
+
+                KeyCode::Up | KeyCode::W => {
+                    self.snake.set_direction(Direction::Up);
                 }
+                KeyCode::Down | KeyCode::S => {
+                    self.snake.set_direction(Direction::Down);
+                }
+                KeyCode::Left | KeyCode::A => {
+                    self.snake.set_direction(Direction::Left);
+                }
+                KeyCode::Right | KeyCode::D => {
+                    self.snake.set_direction(Direction::Right);
+                }
+                _ => {}
             }
         }
-        ButtonResult::None
+        KeyPressResult::None
     }
 }
 
-pub fn start_game(window: &mut Window, gl: &mut GlGraphics, level: &Level) -> GameOutcome {
+pub async fn start_game(cx: &Context, level: &Level) -> GameOutcome {
     let mut game = Game {
         snake: Snake::new(
             level.start_position,
@@ -140,38 +122,32 @@ pub fn start_game(window: &mut Window, gl: &mut GlGraphics, level: &Level) -> Ga
         obstacles: level.obstacles.clone(),
         width: level.width,
         height: level.height,
-        text: TextHandler::new(),
     };
 
-    game_loop(
-        &mut game,
-        window,
-        gl,
-        level.target_points,
-        level.frames_per_second,
-    )
+    game_loop(&mut game, cx, level.target_points, level.updates_per_second).await
 }
 
-fn game_loop(
+async fn game_loop(
     game: &mut Game,
-    window: &mut Window,
-    gl: &mut GlGraphics,
+    cx: &Context,
     target_points: Option<i32>,
-    frames_per_second: i32,
+    updates_per_second: i32,
 ) -> GameOutcome {
-    #[allow(clippy::cast_sign_loss)]
-    let mut events = Events::new(EventSettings::new()).ups(frames_per_second as u64);
+    let expected_frame_time = 1.0 / updates_per_second as f32;
+    let mut frame_time_accumulated = 0.0;
     let mut point_counter = 0;
-    while let Some(e) = events.next(window) {
-        if let Some(args) = e.render_args() {
-            game.render_game(&args, gl, point_counter, target_points);
+
+    loop {
+        if game.handle_key_press(get_last_key_pressed()) == KeyPressResult::Exit {
+            return GameOutcome::Exit;
         }
 
-        if let Some(_args) = e.update_args() {
-            let update_result = game.update();
-            match update_result {
+        game.render_game(cx, point_counter, target_points);
+
+        if frame_time_accumulated >= expected_frame_time {
+            match game.update() {
                 UpdateResult::Collision => {
-                    break;
+                    return GameOutcome::Lose;
                 }
                 UpdateResult::TargetHit => {
                     point_counter += 1;
@@ -183,21 +159,17 @@ fn game_loop(
                 }
                 UpdateResult::None => {}
             }
+            frame_time_accumulated = 0.0;
         }
 
-        if let Some(args) = e.button_args() {
-            if game.button_press(&args) == ButtonResult::Exit {
-                return GameOutcome::Exit;
-            }
-        }
+        frame_time_accumulated += get_frame_time();
+        next_frame().await;
     }
-    GameOutcome::Lose
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use piston::*;
     use std::vec;
 
     fn init(
@@ -206,18 +178,17 @@ mod tests {
         obstacles: Vec<Point2D<i32, i32>>,
         width: i32,
         height: i32,
-    ) -> Game<'static> {
+    ) -> Game {
         Game {
             snake,
             target,
             obstacles,
             width,
             height,
-            text: TextHandler::new(),
         }
     }
 
-    fn default_init() -> Game<'static> {
+    fn default_init() -> Game {
         let width = 10;
         let height = 10;
 
@@ -227,44 +198,32 @@ mod tests {
             obstacles: vec![],
             width,
             height,
-            text: TextHandler::new(),
         }
     }
 
-    fn key_event(game: &mut Game, state: ButtonState, key: Key, expected_result: ButtonResult) {
-        let args = ButtonArgs {
-            state,
-            button: Button::Keyboard(key),
-            scancode: None,
-        };
-        assert_eq!(expected_result, game.button_press(&args));
+    fn key_event(game: &mut Game, keys: KeyCode, expected_result: KeyPressResult) {
+        assert_eq!(expected_result, game.handle_key_press(Some(keys)));
     }
 
     #[test]
-    fn test_button_press() {
+    fn test_key_press() {
         let mut game = default_init();
 
-        let buttons_none_result = vec![
-            Key::Up,
-            Key::Down,
-            Key::Left,
-            Key::Right,
-            Key::W,
-            Key::S,
-            Key::A,
-            Key::D,
+        let keys_none_result = vec![
+            KeyCode::Up,
+            KeyCode::Down,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::W,
+            KeyCode::S,
+            KeyCode::A,
+            KeyCode::D,
+            KeyCode::X,
         ];
-        for button in buttons_none_result {
-            key_event(&mut game, ButtonState::Press, button, ButtonResult::None);
-            key_event(&mut game, ButtonState::Release, button, ButtonResult::None);
+        for key in keys_none_result {
+            key_event(&mut game, key, KeyPressResult::None);
         }
-
-        key_event(
-            &mut game,
-            ButtonState::Press,
-            Key::Escape,
-            ButtonResult::Exit,
-        );
+        key_event(&mut game, KeyCode::Escape, KeyPressResult::Exit);
     }
 
     #[test]

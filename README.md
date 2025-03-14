@@ -30,7 +30,7 @@ The **Endless Game** takes place on an empty map (no obstacles) and has no point
 
 Levels are stored as Json-files in the **levels** directory. These files follow a strict format:
 - **target_points**: Number of points the player has to reach to complete the level
-- **frames_per_second**: Number of updates (graphics and game logic) per second. Accordingly, this value defines the movement speed of the snake
+- **updates_per_second**: Number of updates (graphics and game logic) per second. Accordingly, this value defines the movement speed of the snake
 - **"o"**: Obstacles. When the snake hits one, the game is over
 - **"s"**: Starting position of the snake
 - **"d"**: Initial directory of the snake
@@ -40,7 +40,7 @@ Levels are stored as Json-files in the **levels** directory. These files follow 
 {
   // example_level.json
   "target_points": 10,
-  "frames_per_second": 8,
+  "updates_per_second": 8,
   "map": [
     ["o","o","o","o","o","o","o","o","o","o","o","o","o"],
     ["o","s","d","-","-","-","-","-","-","-","-","-","o"],

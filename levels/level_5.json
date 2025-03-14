@@ -1,6 +1,6 @@
 {
   "target_points": 100,
-  "frames_per_second": 8,
+  "updates_per_second": 8,
   "map": [
     [
       "o",

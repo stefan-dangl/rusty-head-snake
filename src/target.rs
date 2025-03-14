@@ -1,11 +1,9 @@
 use crate::{
     constants::{TARGET_COLOR, TARGET_WIDTH},
-    graphic_utils::{rectangle_corners, transform},
+    graphic_utils::draw_scaled_square,
 };
 use euclid::Point2D;
-use graphics::rectangle;
-use opengl_graphics::GlGraphics;
-use piston::RenderArgs;
+use macroquad::rand::gen_range;
 
 #[derive(Debug, PartialEq)]
 pub struct Target {
@@ -15,24 +13,15 @@ pub struct Target {
 impl Target {
     pub fn new(obstacles: &[Point2D<i32, i32>], width: i32, height: i32) -> Self {
         loop {
-            #[allow(clippy::cast_possible_truncation)]
-            let position = Point2D::new(
-                (rand::random::<f64>() * f64::from(width)).floor() as i32,
-                (rand::random::<f64>() * f64::from(height)).floor() as i32,
-            );
+            let position = Point2D::new(gen_range(0, width), gen_range(0, height));
             if !obstacles.contains(&position) {
                 return Target { position };
             }
         }
     }
 
-    pub fn render(&mut self, args: &RenderArgs, gl: &mut GlGraphics, scaling: (f64, f64)) {
-        let shape = rectangle_corners(TARGET_WIDTH, scaling);
-
-        gl.draw(args.viewport(), |c, gl| {
-            let transform = transform(c, self.position, scaling);
-            rectangle(TARGET_COLOR, shape, transform, gl);
-        });
+    pub fn render(&mut self, scaling: (f32, f32)) {
+        draw_scaled_square(TARGET_COLOR, self.position, TARGET_WIDTH, scaling);
     }
 }
 

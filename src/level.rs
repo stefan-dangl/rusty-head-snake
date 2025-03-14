@@ -9,7 +9,7 @@ pub struct Level {
     pub start_position: Option<Point2D<i32, i32>>,
     pub start_direction: Option<Direction>,
     pub obstacles: Vec<Point2D<i32, i32>>,
-    pub frames_per_second: i32,
+    pub updates_per_second: i32,
     pub height: i32,
     pub width: i32,
 }
@@ -29,7 +29,7 @@ impl Level {
             start_position: None,
             start_direction: None,
             obstacles: vec![],
-            frames_per_second: 8,
+            updates_per_second: 8,
             height: 10,
             width: 10,
         }
@@ -46,7 +46,7 @@ impl Level {
             serde_json::from_str(&contents).map_err(|_| LoadLevelError::InvalidFormat)?;
 
         let target_points = parse_property(&json["target_points"])?;
-        let frames_per_second = parse_property(&json["frames_per_second"])?;
+        let updates_per_second = parse_property(&json["updates_per_second"])?;
         let map = parse_map(&json["map"])?;
 
         Ok(Level {
@@ -54,7 +54,7 @@ impl Level {
             start_position: Some(map.start_position),
             start_direction: Some(map.direction),
             obstacles: map.obstacles,
-            frames_per_second,
+            updates_per_second,
             height: map.height,
             width: map.width,
         })
@@ -221,7 +221,7 @@ mod test {
     fn test_load_level() {
         let file_content: &str = r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","d","-","o"],
                 ["-","s","-","-"],
@@ -239,7 +239,7 @@ mod test {
                 Point2D::new(0, 2),
                 Point2D::new(3, 2),
             ],
-            frames_per_second: 8,
+            updates_per_second: 8,
             height: 3,
             width: 4,
         };
@@ -259,7 +259,7 @@ mod test {
 
     #[test_case::test_case(
         r#"{
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","d","-"],
@@ -282,7 +282,19 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
+            "map": [
+                ["o","x","-","o"],
+                ["-","s","d","-"],
+                ["-","-","-","-"],
+                ["o","-","-","o"]
+            ]
+        }"#
+    )]
+    #[test_case::test_case(
+        r#"{
+            "target_points": 10,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","-","d","-"],
@@ -294,7 +306,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","s","-","o"],
                 ["-","s","d","-"],
@@ -306,7 +318,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","-","-"],
@@ -318,7 +330,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","d","o"],
                 ["-","s","d","-"],
@@ -330,7 +342,19 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
+            "map": [
+                ["o","-","-","o"],
+                ["-","s","-","d"],
+                ["-","-","-","-"],
+                ["o","-","-","o"]
+            ]
+        }"#
+    )]
+    #[test_case::test_case(
+        r#"{
+            "target_points": 10,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","d","-"],
