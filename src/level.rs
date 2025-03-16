@@ -1,3 +1,6 @@
+mod base_levels;
+pub use base_levels::base_levels;
+
 use crate::snake::Direction;
 use euclid::Point2D;
 use std::fs::{read_dir, File};
@@ -156,7 +159,7 @@ fn parse_map(values_raw: &serde_json::Value) -> Result<Map, LoadLevelError> {
     })
 }
 
-pub fn search_for_levels(search_path: &str) -> Result<Vec<String>, LoadLevelError> {
+pub fn search_for_custom_levels(search_path: &str) -> Result<Vec<String>, LoadLevelError> {
     let mut levels = Vec::new();
     let paths = read_dir(search_path)?;
 
@@ -207,14 +210,14 @@ mod test {
         create_files(path, &expected_files);
 
         let dir_string = path.to_string_lossy().into_owned();
-        let result = search_for_levels(&dir_string).unwrap();
+        let result = search_for_custom_levels(&dir_string).unwrap();
         assert_eq!(expected_files.to_vec(), result);
     }
 
     #[test]
     fn test_search_for_levels_invalid_path() {
         let search_path = "levelsX";
-        assert!(search_for_levels(search_path).is_err());
+        assert!(search_for_custom_levels(search_path).is_err());
     }
 
     #[test]

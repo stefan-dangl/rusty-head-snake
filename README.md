@@ -28,7 +28,7 @@ The **Endless Game** takes place on an empty map (no obstacles) and has no point
 
 ## Adding custom levels
 
-Levels are stored as Json-files in the **levels** directory. These files follow a strict format:
+Custom levels can be added by putting Json-files into the **levels** directory. These files follow a strict format:
 - **target_points**: Number of points the player has to reach to complete the level
 - **updates_per_second**: Number of updates (graphics and game logic) per second. Accordingly, this value defines the movement speed of the snake
 - **"o"**: Obstacles. When the snake hits one, the game is over
@@ -70,7 +70,7 @@ The rendered example level looks as following:
     <em>Rendered examplelevel</em>
 </p>
 
-<br>The sequence of the levels depends on the alphabetical order of the file names. For example, level_1 is loaded before level_2. To add a level between those two, you could name it e.g. level_1a.
+<br>The sequence of the levels depends on the alphabetical order of the file names. For example, level_1 is loaded before level_2. After all custom levels are completed, the base levels are loaded.
 
 
 ## Contributing

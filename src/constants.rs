@@ -16,5 +16,6 @@ pub const SNAKE_TAIL_COLOR: Color = Color::new(0.8, 1.0, 0.0, 1.0);
 pub const TITLE_TEXT_SIZE: u16 = 40;
 pub const OPTION_TEXT_SIZE: u16 = 25;
 pub const POINTS_TEXT_SIZE: u16 = 25;
+pub const ERROR_TEXT_SIZE: u16 = 30;
 
 pub const LEVEL_PATH: &str = "levels";

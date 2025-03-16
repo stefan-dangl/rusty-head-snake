@@ -1,12 +1,25 @@
+use crate::constants::{ERROR_TEXT_SIZE, POINTS_TEXT_SIZE, SNAKE_HEAD_COLOR};
 use euclid::Point2D;
 use macroquad::{
-    color::Color,
+    color::{Color, BLACK, RED},
     shapes::draw_rectangle,
     text::{draw_text_ex, get_text_center, Font, TextParams},
-    window::{screen_height, screen_width},
+    window::{clear_background, next_frame, screen_height, screen_width},
 };
 
-use crate::constants::{POINTS_TEXT_SIZE, SNAKE_HEAD_COLOR};
+pub async fn render_error_message(text: &str) {
+    clear_background(BLACK);
+    loop {
+        render_text(
+            text,
+            Point2D::new(screen_width() / 2.0, screen_height() / 2.0),
+            None,
+            ERROR_TEXT_SIZE,
+            RED,
+        );
+        next_frame().await;
+    }
+}
 
 pub fn draw_scaled_square(
     color: Color,
