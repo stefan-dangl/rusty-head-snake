@@ -1,20 +1,20 @@
 [package]
 name = "rusty-head-snake"
-version = "0.1.0"
+version = "1.0.0"
+authors = ["Tzuzuzj Stefano <tzuzuzj@gmx.at>"]
+description = "A simple Snake implementation completely written in Rust"
+license = "GNU GENERAL PUBLIC LICENSE"
+repository = "https://github.com/tzuzuzj/rusty-head-snake"
 edition = "2021"
 
 
 [dependencies]
-piston = "1.0.0"
-piston2d-graphics = "0.44.0"
-pistoncore-glutin_window = "0.72.0"
-piston2d-opengl_graphics = "0.85.0"
 euclid = "0.22.11"
-rand = "0.9.0"
 serde_json = "1.0.138"
 thiserror = "2.0.11"
 tracing = "0.1.41"
 num_enum = "0.7.3"
+macroquad = "0.4.13"
 
 [dev-dependencies]
 tempfile = "3.3"

@@ -1,10 +1,5 @@
-extern crate euclid;
-extern crate glutin_window;
-extern crate graphics;
-extern crate opengl_graphics;
-extern crate piston;
-extern crate rand;
-extern crate tracing;
+#![allow(clippy::cast_precision_loss)]
+
 mod constants;
 mod game;
 mod graphic_utils;
@@ -12,62 +7,111 @@ mod level;
 mod menu;
 mod snake;
 mod target;
-mod text;
 
 use constants::{LEVEL_PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use game::{start_game, GameOutcome};
-use glutin_window::OpenGL;
-use level::{search_for_levels, Level};
+use graphic_utils::render_error_message;
+use level::{base_levels, search_for_custom_levels, Level};
+use macroquad::prelude::*;
+use macroquad::window;
 use menu::GameMode;
-use opengl_graphics::GlGraphics;
-use piston::WindowSettings;
 use tracing::error;
 
-fn main() {
-    let opengl = OpenGL::V3_2;
+#[derive(PartialEq)]
+enum LevelAction {
+    UserWantsToStop,
+    AllLevelsComplete,
+    LoadNextLevel,
+}
 
-    let mut window = WindowSettings::new("Rusty Head Snake", [WINDOW_WIDTH, WINDOW_HEIGHT])
-        .graphics_api(opengl)
-        .build()
-        .unwrap();
-    let mut opengl_backend = GlGraphics::new(opengl);
+fn window_conf() -> window::Conf {
+    window::Conf {
+        window_title: "Rusty Head Snake".to_owned(),
+        window_width: WINDOW_WIDTH,
+        window_height: WINDOW_HEIGHT,
+        ..Default::default()
+    }
+}
+
+#[derive(Clone)]
+pub struct Context {
+    font: Font,
+}
+
+#[macroquad::main(window_conf)]
+async fn main() {
+    let font = match load_ttf_font_from_bytes(include_bytes!("../assets/FiraSans-Black.ttf")) {
+        Ok(font) => font,
+        Err(err) => {
+            error!(?err, "Failed to load text font");
+            render_error_message(&format!("Failed to load text font: {err}")).await;
+            panic!()
+        }
+    };
+    let cx = Context { font };
 
     loop {
-        let game_mode = menu::start(&mut window, &mut opengl_backend);
+        next_frame().await;
+        let game_mode = menu::start(&cx).await;
 
         match game_mode {
             GameMode::EndlessGame => {
-                start_game(&mut window, &mut opengl_backend, &Level::default());
+                start_game(&cx, &Level::default()).await;
             }
             GameMode::Levels => {
-                let level_names = match search_for_levels(LEVEL_PATH) {
-                    Ok(paths) => paths,
-                    Err(err) => {
-                        error!(?err, "No levels found");
-                        continue;
-                    }
-                };
-                'level_loop: for level_name in &level_names {
-                    let level = match Level::load_level(LEVEL_PATH, level_name) {
-                        Ok(level) => level,
-                        Err(err) => {
-                            error!(
-                                ?err,
-                                "Level {} is not valid and therefore skipped", level_name
-                            );
-                            continue;
-                        }
-                    };
-                    loop {
-                        match start_game(&mut window, &mut opengl_backend, &level) {
-                            GameOutcome::Win => break,
-                            GameOutcome::Exit => break 'level_loop,
-                            GameOutcome::Lose => {}
-                        }
-                    }
+                if play_custom_levels(&cx).await == LevelAction::UserWantsToStop {
+                    continue;
+                }
+                if play_base_levels(&cx).await == LevelAction::UserWantsToStop {
+                    continue;
                 }
             }
             GameMode::Exit => break,
+        }
+    }
+}
+
+async fn play_custom_levels(cx: &Context) -> LevelAction {
+    let custom_level_names = match search_for_custom_levels(LEVEL_PATH) {
+        Ok(paths) => paths,
+        Err(err) => {
+            error!(?err, "Failed to search for custom levels");
+            vec![]
+        }
+    };
+    for level_name in &custom_level_names {
+        match Level::load_level(LEVEL_PATH, level_name) {
+            Ok(level) => {
+                if loop_level(cx, &level).await == LevelAction::UserWantsToStop {
+                    return LevelAction::UserWantsToStop;
+                }
+            }
+            Err(err) => {
+                error!(
+                    ?err,
+                    "Custom level {} is not valid and therefore skipped", level_name
+                );
+            }
+        };
+    }
+    LevelAction::AllLevelsComplete
+}
+
+async fn play_base_levels(cx: &Context) -> LevelAction {
+    for level in base_levels() {
+        if loop_level(cx, &level).await == LevelAction::UserWantsToStop {
+            return LevelAction::UserWantsToStop;
+        }
+    }
+    LevelAction::AllLevelsComplete
+}
+
+async fn loop_level(cx: &Context, level: &Level) -> LevelAction {
+    loop {
+        match start_game(cx, level).await {
+            GameOutcome::Win => return LevelAction::LoadNextLevel,
+            GameOutcome::Exit => return LevelAction::UserWantsToStop,
+            GameOutcome::Lose => {}
         }
     }
 }

@@ -1,13 +1,10 @@
 use crate::{
     constants::{SNAKE_HEAD_COLOR, SNAKE_TAIL_COLOR, SNAKE_WIDTH},
-    graphic_utils::{rectangle_corners, transform},
+    graphic_utils::draw_scaled_square,
 };
 use euclid::{approxord::max, Point2D};
-use graphics::rectangle;
+use macroquad::rand::gen_range;
 use num_enum::TryFromPrimitive;
-use opengl_graphics::GlGraphics;
-use piston::RenderArgs;
-use rand::{rng, seq::IndexedRandom};
 use std::ops::Range;
 
 const NUMBER_OF_DIRECTIONS: u8 = 4;
@@ -51,17 +48,13 @@ impl Snake {
         direction_range: Range<u8>,
     ) -> Self {
         let position = start_position.unwrap_or_else(|| {
-            let width_values: Vec<i32> = width.collect();
-            let height_values: Vec<i32> = height.collect();
             Point2D::new(
-                width_values.choose(&mut rng()).copied().unwrap(),
-                height_values.choose(&mut rng()).copied().unwrap(),
+                gen_range(width.start, width.end),
+                gen_range(height.start, height.end),
             )
         });
-
         let direction = start_direction.unwrap_or_else(|| {
-            let direction_values: Vec<u8> = direction_range.collect();
-            let direction_value = direction_values.choose(&mut rng()).copied().unwrap();
+            let direction_value = gen_range(direction_range.start, direction_range.end);
             Direction::try_from(direction_value).unwrap()
         });
 
@@ -134,22 +127,13 @@ impl Snake {
         self.position[1..].contains(&self.position[0])
     }
 
-    pub fn render(&mut self, args: &RenderArgs, gl: &mut GlGraphics, scaling: (f64, f64)) {
-        let shape = rectangle_corners(SNAKE_WIDTH, scaling);
-
-        gl.draw(args.viewport(), |c, gl| {
-            let transform = transform(c, self.position[0], scaling);
-            rectangle(SNAKE_HEAD_COLOR, shape, transform, gl);
-        });
+    pub fn render(&mut self, scaling: (f32, f32)) {
+        draw_scaled_square(SNAKE_HEAD_COLOR, self.position[0], SNAKE_WIDTH, scaling);
 
         for (i, position) in self.position[1..].iter().enumerate() {
-            #[allow(clippy::cast_precision_loss)]
-            gl.draw(args.viewport(), |c, gl| {
-                let transform = transform(c, *position, scaling);
-                let mut color = SNAKE_TAIL_COLOR;
-                color[3] = max(1.0 - i as f32 * 0.075, 0.25);
-                rectangle(color, shape, transform, gl);
-            });
+            let mut color = SNAKE_TAIL_COLOR;
+            color.a = max(1.0 - i as f32 * 0.075, 0.25);
+            draw_scaled_square(color, *position, SNAKE_WIDTH, scaling);
         }
     }
 }

@@ -1,3 +1,6 @@
+mod base_levels;
+pub use base_levels::base_levels;
+
 use crate::snake::Direction;
 use euclid::Point2D;
 use std::fs::{read_dir, File};
@@ -9,7 +12,7 @@ pub struct Level {
     pub start_position: Option<Point2D<i32, i32>>,
     pub start_direction: Option<Direction>,
     pub obstacles: Vec<Point2D<i32, i32>>,
-    pub frames_per_second: i32,
+    pub updates_per_second: i32,
     pub height: i32,
     pub width: i32,
 }
@@ -29,7 +32,7 @@ impl Level {
             start_position: None,
             start_direction: None,
             obstacles: vec![],
-            frames_per_second: 8,
+            updates_per_second: 8,
             height: 10,
             width: 10,
         }
@@ -46,7 +49,7 @@ impl Level {
             serde_json::from_str(&contents).map_err(|_| LoadLevelError::InvalidFormat)?;
 
         let target_points = parse_property(&json["target_points"])?;
-        let frames_per_second = parse_property(&json["frames_per_second"])?;
+        let updates_per_second = parse_property(&json["updates_per_second"])?;
         let map = parse_map(&json["map"])?;
 
         Ok(Level {
@@ -54,7 +57,7 @@ impl Level {
             start_position: Some(map.start_position),
             start_direction: Some(map.direction),
             obstacles: map.obstacles,
-            frames_per_second,
+            updates_per_second,
             height: map.height,
             width: map.width,
         })
@@ -156,7 +159,7 @@ fn parse_map(values_raw: &serde_json::Value) -> Result<Map, LoadLevelError> {
     })
 }
 
-pub fn search_for_levels(search_path: &str) -> Result<Vec<String>, LoadLevelError> {
+pub fn search_for_custom_levels(search_path: &str) -> Result<Vec<String>, LoadLevelError> {
     let mut levels = Vec::new();
     let paths = read_dir(search_path)?;
 
@@ -207,21 +210,21 @@ mod test {
         create_files(path, &expected_files);
 
         let dir_string = path.to_string_lossy().into_owned();
-        let result = search_for_levels(&dir_string).unwrap();
+        let result = search_for_custom_levels(&dir_string).unwrap();
         assert_eq!(expected_files.to_vec(), result);
     }
 
     #[test]
     fn test_search_for_levels_invalid_path() {
         let search_path = "levelsX";
-        assert!(search_for_levels(search_path).is_err());
+        assert!(search_for_custom_levels(search_path).is_err());
     }
 
     #[test]
     fn test_load_level() {
         let file_content: &str = r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","d","-","o"],
                 ["-","s","-","-"],
@@ -239,7 +242,7 @@ mod test {
                 Point2D::new(0, 2),
                 Point2D::new(3, 2),
             ],
-            frames_per_second: 8,
+            updates_per_second: 8,
             height: 3,
             width: 4,
         };
@@ -259,7 +262,7 @@ mod test {
 
     #[test_case::test_case(
         r#"{
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","d","-"],
@@ -282,7 +285,19 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
+            "map": [
+                ["o","x","-","o"],
+                ["-","s","d","-"],
+                ["-","-","-","-"],
+                ["o","-","-","o"]
+            ]
+        }"#
+    )]
+    #[test_case::test_case(
+        r#"{
+            "target_points": 10,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","-","d","-"],
@@ -294,7 +309,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","s","-","o"],
                 ["-","s","d","-"],
@@ -306,7 +321,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","-","-"],
@@ -318,7 +333,7 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","d","o"],
                 ["-","s","d","-"],
@@ -330,7 +345,19 @@ mod test {
     #[test_case::test_case(
         r#"{
             "target_points": 10,
-            "frames_per_second": 8,
+            "updates_per_second": 8,
+            "map": [
+                ["o","-","-","o"],
+                ["-","s","-","d"],
+                ["-","-","-","-"],
+                ["o","-","-","o"]
+            ]
+        }"#
+    )]
+    #[test_case::test_case(
+        r#"{
+            "target_points": 10,
+            "updates_per_second": 8,
             "map": [
                 ["o","-","-","o"],
                 ["-","s","d","-"],
