@@ -25,6 +25,9 @@ The **Endless Game** takes place on an empty map (no obstacles) and has no point
 </div>
 
 
+## How to run
+
+You can either clone the repository and run it locally using `cargo run` or play it in your [browser](https://tzuzuzj.github.io/rusty-head-snake/). You can also compile it to WebAssembly yourself and host it locally. Information about how to compile Rust projects to WebAssembly can be found [here](https://mq.agical.se/release-web.html).
 
 ## Adding custom levels
 
@@ -67,7 +70,7 @@ The rendered example level looks as following:
     <img src="docs/images/example_level_2.png" alt="Level in-game" width="250">
 </p>
 <p>
-    <em>Rendered examplelevel</em>
+    <em>Rendered example level</em>
 </p>
 
 <br>The sequence of the levels depends on the alphabetical order of the file names. For example, level_1 is loaded before level_2. After all custom levels are completed, the base levels are loaded.

@@ -4,7 +4,7 @@ use crate::constants::{
 use crate::graphic_utils::{draw_x_centered_rect, render_text};
 use crate::Context;
 use euclid::Point2D;
-use macroquad::input::{get_last_key_pressed, KeyCode};
+use macroquad::input::{get_last_key_pressed, touches, KeyCode, Touch, TouchPhase};
 use macroquad::prelude::{clear_background, next_frame};
 use macroquad::window::{screen_height, screen_width};
 
@@ -21,9 +21,13 @@ pub enum GameMode {
 }
 
 impl Menu {
+    fn height_segment() -> f32 {
+        screen_height() / (NUMBER_OF_OPTIONS + 1) as f32
+    }
+
     fn render_menu(&mut self, cx: &Context) {
         clear_background(BACKGROUND_COLOR);
-        let height_segment = screen_height() / (NUMBER_OF_OPTIONS + 1) as f32;
+        let height_segment = Menu::height_segment();
         self.render_boxes(height_segment);
         Menu::render_text(height_segment, cx);
     }
@@ -69,6 +73,15 @@ impl Menu {
         }
     }
 
+    fn game_mode_from_cursor_position(&self) -> Option<GameMode> {
+        match self.cursor {
+            0 => Some(GameMode::Levels),
+            1 => Some(GameMode::EndlessGame),
+            2 => Some(GameMode::Exit),
+            _ => None,
+        }
+    }
+
     fn handle_key_press(&mut self, key: Option<KeyCode>) -> Option<GameMode> {
         if let Some(key) = key {
             match key {
@@ -81,15 +94,34 @@ impl Menu {
                 KeyCode::Down | KeyCode::S => {
                     self.cursor = (self.cursor + 1) % NUMBER_OF_OPTIONS;
                 }
-                KeyCode::Space | KeyCode::Enter => {
-                    return match self.cursor {
-                        0 => Some(GameMode::Levels),
-                        1 => Some(GameMode::EndlessGame),
-                        2 => Some(GameMode::Exit),
-                        _ => None,
-                    };
-                }
+                KeyCode::Space | KeyCode::Enter => return self.game_mode_from_cursor_position(),
                 _ => {}
+            }
+        }
+        None
+    }
+
+    fn handle_touch(&mut self, touch: &Touch) -> Option<GameMode> {
+        let height_segment = Menu::height_segment();
+
+        if touch.phase == TouchPhase::Started {
+            for i in 0..NUMBER_OF_OPTIONS {
+                let center_position = height_segment * (i as f32 + NUMBER_OF_OPTIONS as f32 / 2.0);
+                if touch.position.y > center_position - height_segment / 4.0
+                    && touch.position.y < center_position + height_segment / 4.0
+                {
+                    self.cursor = i;
+                }
+            }
+        }
+
+        if touch.phase == TouchPhase::Ended {
+            let center_position =
+                height_segment * (self.cursor as f32 + NUMBER_OF_OPTIONS as f32 / 2.0);
+            if touch.position.y > center_position - height_segment / 4.0
+                && touch.position.y < center_position + height_segment / 4.0
+            {
+                return self.game_mode_from_cursor_position();
             }
         }
         None
@@ -103,10 +135,18 @@ pub async fn start(cx: &Context) -> GameMode {
 
 pub async fn menu_loop(menu: &mut Menu, cx: &Context) -> GameMode {
     loop {
-        menu.render_menu(cx);
         if let Some(game_mode) = menu.handle_key_press(get_last_key_pressed()) {
             return game_mode;
         }
+
+        for touch in touches() {
+            if let Some(game_mode) = menu.handle_touch(&touch) {
+                return game_mode;
+            }
+        }
+
+        menu.render_menu(cx);
+
         next_frame().await;
     }
 }
