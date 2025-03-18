@@ -1,7 +1,7 @@
 mod base_levels;
-pub use base_levels::base_levels;
 
 use crate::snake::Direction;
+pub use base_levels::base_levels;
 use euclid::Point2D;
 use std::fs::{read_dir, File};
 use std::io::Read;

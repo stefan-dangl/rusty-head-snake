@@ -5,7 +5,7 @@ use crate::snake::{Direction, Snake};
 use crate::target::Target;
 use crate::Context;
 use euclid::Point2D;
-use macroquad::input::{get_last_key_pressed, KeyCode};
+use macroquad::input::{get_last_key_pressed, touches_local, KeyCode, Touch, TouchPhase};
 use macroquad::time::get_frame_time;
 use macroquad::window::{clear_background, next_frame, screen_height, screen_width};
 
@@ -108,6 +108,29 @@ impl Game {
         }
         KeyPressResult::None
     }
+
+    fn handle_touch(&mut self, touch: &Touch) {
+        const X_BOUNDARY: f32 = 0.4;
+        const Y_BOUNDARY: f32 = 0.35;
+
+        if touch.phase == TouchPhase::Started {
+            if touch.position.y < Y_BOUNDARY
+                && touch.position.x > -X_BOUNDARY
+                && touch.position.x < X_BOUNDARY
+            {
+                self.snake.set_direction(Direction::Up);
+            } else if touch.position.y >= Y_BOUNDARY
+                && touch.position.x > -X_BOUNDARY
+                && touch.position.x < X_BOUNDARY
+            {
+                self.snake.set_direction(Direction::Down);
+            } else if touch.position.x < -X_BOUNDARY {
+                self.snake.set_direction(Direction::Left);
+            } else if touch.position.x >= X_BOUNDARY {
+                self.snake.set_direction(Direction::Right);
+            }
+        }
+    }
 }
 
 pub async fn start_game(cx: &Context, level: &Level) -> GameOutcome {
@@ -142,7 +165,9 @@ async fn game_loop(
             return GameOutcome::Exit;
         }
 
-        game.render_game(cx, point_counter, target_points);
+        for touch in touches_local() {
+            game.handle_touch(&touch);
+        }
 
         if frame_time_accumulated >= expected_frame_time {
             match game.update() {
@@ -161,6 +186,8 @@ async fn game_loop(
             }
             frame_time_accumulated = 0.0;
         }
+
+        game.render_game(cx, point_counter, target_points);
 
         frame_time_accumulated += get_frame_time();
         next_frame().await;
