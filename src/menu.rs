@@ -1,10 +1,14 @@
 use crate::constants::{
     BACKGROUND_COLOR, OBSTACLE_COLOR, OPTION_TEXT_SIZE, SNAKE_HEAD_COLOR, TITLE_TEXT_SIZE,
 };
-use crate::graphic_utils::{draw_x_centered_rect, render_text};
+use crate::graphic_utils::{render_text, render_x_centered_rect};
 use crate::Context;
 use euclid::Point2D;
-use macroquad::input::{get_last_key_pressed, touches, KeyCode, Touch, TouchPhase};
+use macroquad::input::{
+    get_last_key_pressed, is_mouse_button_released, mouse_position, touches, KeyCode, MouseButton,
+    Touch, TouchPhase,
+};
+use macroquad::math::Vec2;
 use macroquad::prelude::{clear_background, next_frame};
 use macroquad::window::{screen_height, screen_width};
 
@@ -20,21 +24,57 @@ pub enum GameMode {
     Exit,
 }
 
+#[derive(PartialEq, Debug)]
+enum TouchMouseEvent {
+    Floating,
+    Enter,
+    None,
+}
+
+#[derive(Debug)]
+struct TouchMouseData {
+    event: TouchMouseEvent,
+    position: Vec2,
+}
+
+impl TouchMouseData {
+    fn from_mouse_event(is_mouse_release: bool, position: (f32, f32)) -> Self {
+        let event = if is_mouse_release {
+            TouchMouseEvent::Enter
+        } else {
+            TouchMouseEvent::Floating
+        };
+        let position = Vec2::new(position.0, position.1);
+        TouchMouseData { event, position }
+    }
+
+    fn from_touch_event(touch: &Touch) -> Self {
+        let event = match touch.phase {
+            TouchPhase::Started => TouchMouseEvent::Floating,
+            TouchPhase::Ended => TouchMouseEvent::Enter,
+            _ => TouchMouseEvent::None,
+        };
+        TouchMouseData {
+            event,
+            position: touch.position,
+        }
+    }
+}
+
 impl Menu {
     fn height_segment() -> f32 {
         screen_height() / (NUMBER_OF_OPTIONS + 1) as f32
     }
 
-    fn render_menu(&mut self, cx: &Context) {
+    fn render_menu(&mut self, cx: &Context, height_segment: f32) {
         clear_background(BACKGROUND_COLOR);
-        let height_segment = Menu::height_segment();
         self.render_boxes(height_segment);
         Menu::render_text(height_segment, cx);
     }
 
     fn render_boxes(&mut self, height_segment: f32) {
         for i in 0..NUMBER_OF_OPTIONS {
-            draw_x_centered_rect(
+            render_x_centered_rect(
                 height_segment * (i as f32 + NUMBER_OF_OPTIONS as f32 / 2.0),
                 height_segment / 2.0,
                 OBSTACLE_COLOR,
@@ -42,7 +82,7 @@ impl Menu {
         }
 
         if self.cursor >= 0 && self.cursor < NUMBER_OF_OPTIONS {
-            draw_x_centered_rect(
+            render_x_centered_rect(
                 height_segment * (self.cursor as f32 + NUMBER_OF_OPTIONS as f32 / 2.0),
                 height_segment / 2.0,
                 SNAKE_HEAD_COLOR,
@@ -101,25 +141,27 @@ impl Menu {
         None
     }
 
-    fn handle_touch(&mut self, touch: &Touch) -> Option<GameMode> {
-        let height_segment = Menu::height_segment();
-
-        if touch.phase == TouchPhase::Started {
+    fn handle_touch_mouse(
+        &mut self,
+        touch_mouse: &TouchMouseData,
+        height_segment: f32,
+    ) -> Option<GameMode> {
+        if touch_mouse.event == TouchMouseEvent::Floating {
             for i in 0..NUMBER_OF_OPTIONS {
                 let center_position = height_segment * (i as f32 + NUMBER_OF_OPTIONS as f32 / 2.0);
-                if touch.position.y > center_position - height_segment / 4.0
-                    && touch.position.y < center_position + height_segment / 4.0
+                if touch_mouse.position.y > center_position - height_segment / 4.0
+                    && touch_mouse.position.y < center_position + height_segment / 4.0
                 {
                     self.cursor = i;
                 }
             }
         }
 
-        if touch.phase == TouchPhase::Ended {
+        if touch_mouse.event == TouchMouseEvent::Enter {
             let center_position =
                 height_segment * (self.cursor as f32 + NUMBER_OF_OPTIONS as f32 / 2.0);
-            if touch.position.y > center_position - height_segment / 4.0
-                && touch.position.y < center_position + height_segment / 4.0
+            if touch_mouse.position.y > center_position - height_segment / 4.0
+                && touch_mouse.position.y < center_position + height_segment / 4.0
             {
                 return self.game_mode_from_cursor_position();
             }
@@ -135,17 +177,28 @@ pub async fn start(cx: &Context) -> GameMode {
 
 pub async fn menu_loop(menu: &mut Menu, cx: &Context) -> GameMode {
     loop {
+        let height_segment = Menu::height_segment();
+
         if let Some(game_mode) = menu.handle_key_press(get_last_key_pressed()) {
             return game_mode;
         }
 
         for touch in touches() {
-            if let Some(game_mode) = menu.handle_touch(&touch) {
+            let touch = TouchMouseData::from_touch_event(&touch);
+            if let Some(game_mode) = menu.handle_touch_mouse(&touch, height_segment) {
                 return game_mode;
             }
         }
 
-        menu.render_menu(cx);
+        let mouse = TouchMouseData::from_mouse_event(
+            is_mouse_button_released(MouseButton::Left),
+            mouse_position(),
+        );
+        if let Some(game_mode) = menu.handle_touch_mouse(&mouse, height_segment) {
+            return game_mode;
+        }
+
+        menu.render_menu(cx, height_segment);
 
         next_frame().await;
     }
@@ -220,5 +273,56 @@ mod tests {
         cursor_position.push(menu.cursor);
 
         assert_eq!(expected_cursor_position, cursor_position);
+    }
+
+    #[test]
+    fn test_handle_touch() {
+        let mut menu = init();
+        let height_segment = 1.0;
+
+        for i in 0..NUMBER_OF_OPTIONS {
+            let position = i as f32 + NUMBER_OF_OPTIONS as f32 / 2.0;
+            let mut touch = Touch {
+                id: 0,
+                phase: TouchPhase::Started,
+                position: Vec2 {
+                    x: 0.0,
+                    y: position,
+                },
+            };
+
+            let touch_mouse_data = TouchMouseData::from_touch_event(&touch.clone());
+            assert_eq!(
+                menu.handle_touch_mouse(&touch_mouse_data, height_segment),
+                None
+            );
+            assert_eq!(menu.cursor, i);
+
+            touch.phase = TouchPhase::Ended;
+            let touch_mouse_data = TouchMouseData::from_touch_event(&touch);
+            let selected_game_mode = menu.handle_touch_mouse(&touch_mouse_data, height_segment);
+            assert_eq!(selected_game_mode, menu.game_mode_from_cursor_position());
+        }
+    }
+
+    #[test]
+    fn test_handle_mouse() {
+        let mut menu = init();
+        let height_segment = 1.0;
+
+        for i in 0..NUMBER_OF_OPTIONS {
+            let position = i as f32 + NUMBER_OF_OPTIONS as f32 / 2.0;
+
+            let touch_mouse_data = TouchMouseData::from_mouse_event(false, (0.0, position));
+            assert_eq!(
+                menu.handle_touch_mouse(&touch_mouse_data, height_segment),
+                None
+            );
+            assert_eq!(menu.cursor, i);
+
+            let touch_mouse_data = TouchMouseData::from_mouse_event(true, (0.0, position));
+            let selected_game_mode = menu.handle_touch_mouse(&touch_mouse_data, height_segment);
+            assert_eq!(selected_game_mode, menu.game_mode_from_cursor_position());
+        }
     }
 }

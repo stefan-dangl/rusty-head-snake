@@ -7,6 +7,7 @@ mod level;
 mod menu;
 mod snake;
 mod target;
+mod touch_fields;
 
 use constants::{LEVEL_PATH, WINDOW_HEIGHT, WINDOW_WIDTH};
 use game::{start_game, GameOutcome};

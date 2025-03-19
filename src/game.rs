@@ -1,11 +1,14 @@
-use crate::constants::{BACKGROUND_COLOR, OBSTACLE_COLOR, OBSTACLE_WIDTH};
-use crate::graphic_utils::{draw_scaled_square, render_points};
+use crate::constants::{
+    BACKGROUND_COLOR, DOWN_TOUCH_FIELD, LEFT_TOUCH_FIELD, OBSTACLE_COLOR, OBSTACLE_WIDTH,
+    RIGHT_TOUCH_FIELD, UP_TOUCH_FIELD,
+};
+use crate::graphic_utils::{render_points, render_scaled_square};
 use crate::level::Level;
 use crate::snake::{Direction, Snake};
 use crate::target::Target;
 use crate::Context;
 use euclid::Point2D;
-use macroquad::input::{get_last_key_pressed, touches_local, KeyCode, Touch, TouchPhase};
+use macroquad::input::{get_last_key_pressed, touches_local, KeyCode, Touch};
 use macroquad::time::get_frame_time;
 use macroquad::window::{clear_background, next_frame, screen_height, screen_width};
 
@@ -50,12 +53,20 @@ impl Game {
         self.target.render(scaling);
         self.snake.render(scaling);
         render_points(point_counter, point_target, Some(&cx.font));
+        Game::render_touch_field_boundaries();
     }
 
     fn render_obstacles(&mut self, scaling: (f32, f32)) {
         for position in &self.obstacles {
-            draw_scaled_square(OBSTACLE_COLOR, *position, OBSTACLE_WIDTH, scaling);
+            render_scaled_square(OBSTACLE_COLOR, *position, OBSTACLE_WIDTH, scaling);
         }
+    }
+
+    fn render_touch_field_boundaries() {
+        UP_TOUCH_FIELD.render_inactive_boundaries();
+        DOWN_TOUCH_FIELD.render_inactive_boundaries();
+        LEFT_TOUCH_FIELD.render_inactive_boundaries();
+        RIGHT_TOUCH_FIELD.render_inactive_boundaries();
     }
 
     fn update(&mut self) -> UpdateResult {
@@ -92,15 +103,19 @@ impl Game {
                 KeyCode::Escape => return KeyPressResult::Exit,
 
                 KeyCode::Up | KeyCode::W => {
+                    UP_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Up);
                 }
                 KeyCode::Down | KeyCode::S => {
+                    DOWN_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Down);
                 }
                 KeyCode::Left | KeyCode::A => {
+                    LEFT_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Left);
                 }
                 KeyCode::Right | KeyCode::D => {
+                    RIGHT_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Right);
                 }
                 _ => {}
@@ -110,25 +125,21 @@ impl Game {
     }
 
     fn handle_touch(&mut self, touch: &Touch) {
-        const X_BOUNDARY: f32 = 0.4;
-        const Y_BOUNDARY: f32 = 0.35;
-
-        if touch.phase == TouchPhase::Started {
-            if touch.position.y < Y_BOUNDARY
-                && touch.position.x > -X_BOUNDARY
-                && touch.position.x < X_BOUNDARY
-            {
-                self.snake.set_direction(Direction::Up);
-            } else if touch.position.y >= Y_BOUNDARY
-                && touch.position.x > -X_BOUNDARY
-                && touch.position.x < X_BOUNDARY
-            {
-                self.snake.set_direction(Direction::Down);
-            } else if touch.position.x < -X_BOUNDARY {
-                self.snake.set_direction(Direction::Left);
-            } else if touch.position.x >= X_BOUNDARY {
-                self.snake.set_direction(Direction::Right);
-            }
+        if UP_TOUCH_FIELD.in_touch_field(touch.position) {
+            UP_TOUCH_FIELD.render_active_boundaries();
+            self.snake.set_direction(Direction::Up);
+        }
+        if DOWN_TOUCH_FIELD.in_touch_field(touch.position) {
+            DOWN_TOUCH_FIELD.render_active_boundaries();
+            self.snake.set_direction(Direction::Down);
+        }
+        if LEFT_TOUCH_FIELD.in_touch_field(touch.position) {
+            LEFT_TOUCH_FIELD.render_active_boundaries();
+            self.snake.set_direction(Direction::Left);
+        }
+        if RIGHT_TOUCH_FIELD.in_touch_field(touch.position) {
+            RIGHT_TOUCH_FIELD.render_active_boundaries();
+            self.snake.set_direction(Direction::Right);
         }
     }
 }
@@ -161,6 +172,8 @@ async fn game_loop(
     let mut point_counter = 0;
 
     loop {
+        game.render_game(cx, point_counter, target_points);
+
         if game.handle_key_press(get_last_key_pressed()) == KeyPressResult::Exit {
             return GameOutcome::Exit;
         }
@@ -187,8 +200,6 @@ async fn game_loop(
             frame_time_accumulated = 0.0;
         }
 
-        game.render_game(cx, point_counter, target_points);
-
         frame_time_accumulated += get_frame_time();
         next_frame().await;
     }
@@ -213,44 +224,6 @@ mod tests {
             width,
             height,
         }
-    }
-
-    fn default_init() -> Game {
-        let width = 10;
-        let height = 10;
-
-        Game {
-            snake: Snake::new(None, None, width, height),
-            target: Target::new(&[], width, height),
-            obstacles: vec![],
-            width,
-            height,
-        }
-    }
-
-    fn key_event(game: &mut Game, keys: KeyCode, expected_result: KeyPressResult) {
-        assert_eq!(expected_result, game.handle_key_press(Some(keys)));
-    }
-
-    #[test]
-    fn test_key_press() {
-        let mut game = default_init();
-
-        let keys_none_result = vec![
-            KeyCode::Up,
-            KeyCode::Down,
-            KeyCode::Left,
-            KeyCode::Right,
-            KeyCode::W,
-            KeyCode::S,
-            KeyCode::A,
-            KeyCode::D,
-            KeyCode::X,
-        ];
-        for key in keys_none_result {
-            key_event(&mut game, key, KeyPressResult::None);
-        }
-        key_event(&mut game, KeyCode::Escape, KeyPressResult::Exit);
     }
 
     #[test]

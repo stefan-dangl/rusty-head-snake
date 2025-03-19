@@ -1,6 +1,6 @@
 use crate::{
     constants::{SNAKE_HEAD_COLOR, SNAKE_TAIL_COLOR, SNAKE_WIDTH},
-    graphic_utils::draw_scaled_square,
+    graphic_utils::render_scaled_square,
 };
 use euclid::{approxord::max, Point2D};
 use macroquad::rand::gen_range;
@@ -20,8 +20,8 @@ pub enum Direction {
 #[derive(Debug, PartialEq)]
 pub struct Snake {
     pub position: Vec<Point2D<i32, i32>>,
-    direction: Direction,
-    current_direction: Direction,
+    pub direction: Direction,
+    pub current_direction: Direction,
 }
 
 impl Snake {
@@ -128,12 +128,12 @@ impl Snake {
     }
 
     pub fn render(&mut self, scaling: (f32, f32)) {
-        draw_scaled_square(SNAKE_HEAD_COLOR, self.position[0], SNAKE_WIDTH, scaling);
+        render_scaled_square(SNAKE_HEAD_COLOR, self.position[0], SNAKE_WIDTH, scaling);
 
         for (i, position) in self.position[1..].iter().enumerate() {
             let mut color = SNAKE_TAIL_COLOR;
             color.a = max(1.0 - i as f32 * 0.075, 0.25);
-            draw_scaled_square(color, *position, SNAKE_WIDTH, scaling);
+            render_scaled_square(color, *position, SNAKE_WIDTH, scaling);
         }
     }
 }

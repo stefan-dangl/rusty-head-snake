@@ -32,9 +32,9 @@ impl Level {
             start_position: None,
             start_direction: None,
             obstacles: vec![],
-            updates_per_second: 8,
-            height: 10,
-            width: 10,
+            updates_per_second: 10,
+            height: 20,
+            width: 20,
         }
     }
 
