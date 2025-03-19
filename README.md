@@ -36,7 +36,7 @@ Custom levels can be added by putting Json-files into the **levels** directory. 
 - **updates_per_second**: Number of updates (graphics and game logic) per second. Accordingly, this value defines the movement speed of the snake
 - **"o"**: Obstacles. When the snake hits one, the game is over
 - **"s"**: Starting position of the snake
-- **"d"**: Initial directory of the snake
+- **"d"**: Initial direction of the snake
 - **"-"**: Empty field. This is were the snake is allowed to move and where targets can spawn
 
 ```Json
