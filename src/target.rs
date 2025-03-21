@@ -1,6 +1,6 @@
 use crate::{
     constants::{TARGET_COLOR, TARGET_WIDTH},
-    graphic_utils::draw_scaled_square,
+    graphic_utils::render_scaled_square,
 };
 use euclid::Point2D;
 use macroquad::rand::gen_range;
@@ -21,7 +21,7 @@ impl Target {
     }
 
     pub fn render(&mut self, scaling: (f32, f32)) {
-        draw_scaled_square(TARGET_COLOR, self.position, TARGET_WIDTH, scaling);
+        render_scaled_square(TARGET_COLOR, self.position, TARGET_WIDTH, scaling);
     }
 }
 

@@ -21,7 +21,7 @@ pub async fn render_error_message(text: &str) {
     }
 }
 
-pub fn draw_scaled_square(
+pub fn render_scaled_square(
     color: Color,
     position: Point2D<i32, i32>,
     width: f32,
@@ -36,7 +36,7 @@ pub fn draw_scaled_square(
     );
 }
 
-pub fn draw_x_centered_rect(y_position: f32, height: f32, color: Color) {
+pub fn render_x_centered_rect(y_position: f32, height: f32, color: Color) {
     draw_rectangle(
         screen_width() / 4.0,
         y_position - height / 2.0,
