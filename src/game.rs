@@ -1,16 +1,17 @@
 use crate::constants::{
-    BACKGROUND_COLOR, DOWN_TOUCH_FIELD, LEFT_TOUCH_FIELD, OBSTACLE_COLOR, OBSTACLE_WIDTH,
-    RIGHT_TOUCH_FIELD, UP_TOUCH_FIELD,
+    BACKGROUND_COLOR, DOWN_TOUCH_FIELD, FINAL_POINTS_SHOW_TIME, LEFT_TOUCH_FIELD, OBSTACLE_COLOR,
+    OBSTACLE_WIDTH, OPTION_TEXT_SIZE, RIGHT_TOUCH_FIELD, SNAKE_HEAD_COLOR, UP_TOUCH_FIELD,
 };
-use crate::graphic_utils::{render_points, render_scaled_square};
+use crate::graphic_utils::{render_points, render_scaled_square, render_text};
 use crate::level::Level;
 use crate::snake::{Direction, Snake};
 use crate::target::Target;
 use crate::Context;
 use euclid::Point2D;
-use macroquad::input::{get_last_key_pressed, touches_local, KeyCode, Touch};
+use macroquad::input::{get_keys_down, get_last_key_pressed, touches_local, KeyCode, Touch};
 use macroquad::time::get_frame_time;
 use macroquad::window::{clear_background, next_frame, screen_height, screen_width};
+use std::collections::HashSet;
 
 pub struct Game {
     pub snake: Snake,
@@ -103,25 +104,36 @@ impl Game {
                 KeyCode::Escape => return KeyPressResult::Exit,
 
                 KeyCode::Up | KeyCode::W => {
-                    UP_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Up);
                 }
                 KeyCode::Down | KeyCode::S => {
-                    DOWN_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Down);
                 }
                 KeyCode::Left | KeyCode::A => {
-                    LEFT_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Left);
                 }
                 KeyCode::Right | KeyCode::D => {
-                    RIGHT_TOUCH_FIELD.render_active_boundaries();
                     self.snake.set_direction(Direction::Right);
                 }
                 _ => {}
             }
         }
         KeyPressResult::None
+    }
+
+    fn handle_keys_down(key: &HashSet<KeyCode>) {
+        if key.contains(&KeyCode::Up) || key.contains(&KeyCode::W) {
+            UP_TOUCH_FIELD.render_active_boundaries();
+        }
+        if key.contains(&KeyCode::Down) || key.contains(&KeyCode::S) {
+            DOWN_TOUCH_FIELD.render_active_boundaries();
+        }
+        if key.contains(&KeyCode::Left) || key.contains(&KeyCode::A) {
+            LEFT_TOUCH_FIELD.render_active_boundaries();
+        }
+        if key.contains(&KeyCode::Right) || key.contains(&KeyCode::D) {
+            RIGHT_TOUCH_FIELD.render_active_boundaries();
+        }
     }
 
     fn handle_touch(&mut self, touch: &Touch) {
@@ -158,7 +170,12 @@ pub async fn start_game(cx: &Context, level: &Level) -> GameOutcome {
         height: level.height,
     };
 
-    game_loop(&mut game, cx, level.target_points, level.updates_per_second).await
+    let (game_outcome, points) =
+        game_loop(&mut game, cx, level.target_points, level.updates_per_second).await;
+    if level.target_points.is_none() {
+        render_final_points(points, cx).await;
+    }
+    game_outcome
 }
 
 async fn game_loop(
@@ -166,17 +183,18 @@ async fn game_loop(
     cx: &Context,
     target_points: Option<i32>,
     updates_per_second: i32,
-) -> GameOutcome {
+) -> (GameOutcome, i32) {
     let expected_frame_time = 1.0 / updates_per_second as f32;
     let mut frame_time_accumulated = 0.0;
     let mut point_counter = 0;
 
-    loop {
+    let game_outcome = loop {
         game.render_game(cx, point_counter, target_points);
 
         if game.handle_key_press(get_last_key_pressed()) == KeyPressResult::Exit {
-            return GameOutcome::Exit;
+            break GameOutcome::Exit;
         }
+        Game::handle_keys_down(&get_keys_down());
 
         for touch in touches_local() {
             game.handle_touch(&touch);
@@ -185,13 +203,13 @@ async fn game_loop(
         if frame_time_accumulated >= expected_frame_time {
             match game.update() {
                 UpdateResult::Collision => {
-                    return GameOutcome::Lose;
+                    break GameOutcome::Lose;
                 }
                 UpdateResult::TargetHit => {
                     point_counter += 1;
                     if let Some(target) = target_points {
                         if point_counter >= target {
-                            return GameOutcome::Win;
+                            break GameOutcome::Win;
                         }
                     }
                 }
@@ -200,6 +218,27 @@ async fn game_loop(
             frame_time_accumulated = 0.0;
         }
 
+        frame_time_accumulated += get_frame_time();
+        next_frame().await;
+    };
+    (game_outcome, point_counter)
+}
+
+async fn render_final_points(points: i32, cx: &Context) {
+    let mut frame_time_accumulated = 0.0;
+    loop {
+        clear_background(BACKGROUND_COLOR);
+        let center = Point2D::new(screen_width() / 2.0, screen_height() / 2.0);
+        render_text(
+            &format!("{points} Points"),
+            center,
+            Some(&cx.font),
+            OPTION_TEXT_SIZE,
+            SNAKE_HEAD_COLOR,
+        );
+        if frame_time_accumulated >= FINAL_POINTS_SHOW_TIME {
+            break;
+        }
         frame_time_accumulated += get_frame_time();
         next_frame().await;
     }
@@ -224,6 +263,45 @@ mod tests {
             width,
             height,
         }
+    }
+
+    fn default_init() -> Game {
+        let width = 10;
+        let height = 10;
+
+        Game {
+            snake: Snake::new(None, None, width, height),
+            target: Target::new(&[], width, height),
+            obstacles: vec![],
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn test_key_press() {
+        let mut game = default_init();
+
+        let keys_none_result = vec![
+            (KeyCode::Up, Direction::Up, Direction::Left),
+            (KeyCode::Left, Direction::Left, Direction::Down),
+            (KeyCode::Down, Direction::Down, Direction::Right),
+            (KeyCode::Right, Direction::Right, Direction::Up),
+            (KeyCode::W, Direction::Up, Direction::Left),
+            (KeyCode::A, Direction::Left, Direction::Down),
+            (KeyCode::S, Direction::Down, Direction::Right),
+            (KeyCode::D, Direction::Right, Direction::Up),
+            (KeyCode::X, Direction::Right, Direction::Up),
+        ];
+        for key in keys_none_result {
+            game.snake.current_direction = key.2;
+            assert_eq!(KeyPressResult::None, game.handle_key_press(Some(key.0)));
+            assert_eq!(game.snake.direction, key.1);
+        }
+        assert_eq!(
+            KeyPressResult::Exit,
+            game.handle_key_press(Some(KeyCode::Escape))
+        );
     }
 
     #[test]

@@ -58,3 +58,20 @@ impl TouchField {
         );
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test_case::test_case(TouchField {
+        p1: Vec2 { x: 0.0, y: 0.0 },
+        p2: Vec2 { x: 1.0, y: 1.0 },
+    }, Vec2 { x: 0.5, y: 0.5 }, true)]
+    #[test_case::test_case(TouchField {
+        p1: Vec2 { x: 0.0, y: 0.0 },
+        p2: Vec2 { x: 1.0, y: 1.0 },
+    }, Vec2 { x: 2.0, y: 2.0 }, false)]
+    fn test_in_touch_field(field: TouchField, touch_position: Vec2, expected: bool) {
+        assert_eq!(field.in_touch_field(touch_position), expected);
+    }
+}
