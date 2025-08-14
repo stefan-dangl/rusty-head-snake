@@ -1,3 +1,6 @@
+[![CI Status](https://github.com/stefan-dangl/rusty-head-snake/actions/workflows/ci.yml/badge.svg)](https://github.com/stefan-dangl/rusty-head-snake/actions)
+[![Coverage](https://codecov.io/gh/stefan-dangl/rusty-head-snake/branch/main/graph/badge.svg)](https://codecov.io/gh/stefan-dangl/rusty-head-snake)
+
 # rusty-head-snake
 A simple Snake implementation in Rust.
 

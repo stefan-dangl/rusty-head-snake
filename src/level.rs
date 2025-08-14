@@ -134,7 +134,7 @@ fn parse_map(values_raw: &serde_json::Value) -> Result<Map, LoadLevelError> {
     let mut directions: Vec<Point2D<i32, i32>> = vec![];
     for y in 0..height {
         for x in 0..width {
-            #[allow(clippy::match_on_vec_items)]
+            #[allow(clippy::indexing_slicing)]
             #[allow(clippy::cast_sign_loss)]
             match values[y as usize][x as usize] {
                 "o" => obstacles.push(Point2D::new(x, y)),

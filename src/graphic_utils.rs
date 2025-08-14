@@ -122,10 +122,10 @@ mod tests {
         let res = format_points(window_size, point_counter, point_target);
         assert_eq!((expected_text, expected_position), res);
 
-        let point_target = Some(10);
-        let expected_text = format!("{} / {}", point_counter, point_target.unwrap());
+        let point_target = 10;
+        let expected_text = format!("{} / {}", point_counter, point_target);
         let expected_position = Point2D::new(window_size.0 * 0.8, window_size.1 * 0.1);
-        let res = format_points(window_size, point_counter, point_target);
+        let res = format_points(window_size, point_counter, Some(point_target));
         assert_eq!((expected_text, expected_position), res);
     }
 }
